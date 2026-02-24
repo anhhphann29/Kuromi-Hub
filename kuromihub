@@ -1,218 +1,180 @@
--- Kuromi's Universal Hub by Grok - Silent Anti-AFK & More
-wait(0.5)
+local Starlight = loadstring(game:HttpGet("https://raw.nebulasoftworks.xyz/starlight"))()  
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local VirtualUser = game:GetService("VirtualUser")
-local StarterGui = game:GetService("StarterGui")
-local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-local camera = workspace.CurrentCamera
+local NebulaIcons = loadstring(game:HttpGet("https://raw.nebulasoftworks.xyz/nebula-icon-library-loader"))()
 
--- GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = game.CoreGui
-ScreenGui.Name = "KuromiHub"
+local Window = Starlight:CreateWindow({
+    Name = "💖 Kuromi Hub 💤",
+    Subtitle = "v1.0.0",
+    Icon = 123456789,
 
-local Frame = Instance.new("Frame")
-Frame.Parent = ScreenGui
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.Position = UDim2.new(0.75, 0, 0.2, 0)
-Frame.Size = UDim2.new(0, 280, 0, 520)
-Frame.Active = true
-Frame.Draggable = true
+    LoadingSettings = {
+        Title = "💖 Kuromi Hub 💤",
+        Subtitle = "by クロミ_Kuromi07 and lostinlove.15",
+    },
 
-local Title = Instance.new("TextLabel")
-Title.Parent = Frame
-Title.BackgroundColor3 = Color3.fromRGB(0, 120, 120)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = "Kuromi's Universal Hub"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 24
+    FileSettings = {
+        ConfigFolder = "KuromiHub"
+    },
+})
 
-local y = 50  -- Y offset
+local TabSection = Window:CreateTabSection("Tab Section")
+local Tab = TabSection:CreateTab({
+    Name = "Main",
+    Icon = NebulaIcons:GetIcon('view_in_ar', 'Material'),
+    Columns = 2,
+}, "INDEX")
 
--- Anti AFK Silent Toggle
-local antiAFK = false
-local antiAFKConn = player.Idled:Connect(function()
-    if antiAFK then
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())  -- Silent right-click, no jump/move
-    end
-end)
+local Groupbox = Tab:CreateGroupbox({
+    Name = "Groupbox",
+    Column = 1,
+}, "INDEX")
 
-local function toggleAntiAFK()
-    antiAFK = not antiAFK
-end
+local SliderSpeed = Groupbox:CreateSlider({
+    Name = "Speed (Force)",
+    Icon = NebulaIcons:GetIcon('gauge', 'Lucide'),
+    Range = {0, 100},
+    Increment = 1,
+    Callback = function(Value)
+        local Players = game:GetService("Players")
+        local RunService = game:GetService("RunService")
+        local player = Players.LocalPlayer
 
--- Fly
-local flyEnabled = false
-local flySpeed = 50
-local flyConn
-local function toggleFly()
-    flyEnabled = not flyEnabled
-    if flyEnabled and player.Character then
-        local hrp = player.Character.HumanoidRootPart
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "FlyBV"
-        bv.Parent = hrp
-        bv.Velocity = Vector3.new(0,0,0)
-        bv.MaxForce = Vector3.new(1e9,1e9,1e9)
-        local bg = Instance.new("BodyGyro")
-        bg.Name = "FlyBG"
-        bg.Parent = hrp
-        bg.MaxTorque = Vector3.new(1e9,1e9,1e9)
-        bg.P = 9e4
-        flyConn = RunService.RenderStepped:Connect(function()
-            if not player.Character or not flyEnabled then return end
-            local cam = workspace.CurrentCamera
-            local move = Vector3.new(0,0,0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0,-1,0) end
-            hrp.FlyBV.Velocity = move.Unit * flySpeed
-            hrp.FlyBG.CFrame = cam.CFrame
-        end)
-    else
-        if flyConn then flyConn:Disconnect() flyConn = nil end
-        if player.Character then
-            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
-                if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
+        if _G.SpeedForce then
+            _G.SpeedForce:Disconnect()
+        end
+
+        _G.SpeedForce = RunService.RenderStepped:Connect(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+
+                if humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                    hrp.CFrame = hrp.CFrame + (humanoid.MoveDirection * (Value / 10))
+                end
             end
+        end)
+    end,
+}, "INDEX")
+
+local ToggleInfiniteJump = Groupbox:CreateToggle({
+    Name = "Infinite Jump",
+    CurrentValue = false,
+    Style = 2,
+    Callback = function(Value)
+        local Players = game:GetService("Players")
+        local UserInputService = game:GetService("UserInputService")
+        local player = Players.LocalPlayer
+
+        if _G.InfJumpConn then
+            _G.InfJumpConn:Disconnect()
+            _G.InfJumpConn = nil
         end
-    end
-end
 
--- Other vars (giữ nguyên)
-local speedEnabled = false
-local walkSpeed = 50
-local origWalk = 16
-local jumpEnabled = false
-local jumpPower = 100
-local origJump = 50
-local infJump = false
-local origFOV = 70
-camera.FieldOfView = origFOV
-local hitboxEnabled = false
-local hitboxSize = 10
-local aimlockEnabled = false
-local aimlockPart = "Head"
-
-UserInputService.JumpRequest:Connect(function()
-    if infJump and player.Character then
-        player.Character.Humanoid:ChangeState("Jumping")
-    end
-end)
-
-mouse.Button2Down:Connect(function()
-    if aimlockEnabled and mouse.Target and mouse.Target.Parent ~= player.Character and mouse.Target.Parent:FindFirstChild("Humanoid") then
-        local targetPart = mouse.Target.Parent:FindFirstChild(aimlockPart) or mouse.Target.Parent.HumanoidRootPart
-        camera.CFrame = CFrame.lookAt(camera.CFrame.Position, targetPart.Position)
-    end
-end)
-
--- GUI Helpers
-local function createToggle(name, posY, callback, initialState)
-    local btn = Instance.new("TextButton")
-    btn.Parent = Frame
-    btn.BackgroundColor3 = initialState and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(50, 50, 50)
-    btn.Position = UDim2.new(0, 10, 0, posY)
-    btn.Size = UDim2.new(1, -20, 0, 35)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.Text = name .. ": " .. (initialState and "ON" or "OFF")
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 18
-    btn.MouseButton1Click:Connect(function()
-        local isOn = not btn.Text:find("ON")
-        callback()
-        btn.Text = name .. ": " .. (isOn and "ON" or "OFF")
-        btn.BackgroundColor3 = isOn and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(50, 50, 50)
-    end)
-    return btn
-end
-
-local function createSlider(name, posY, minv, maxv, default, callback)
-    local label = Instance.new("TextLabel")
-    label.Parent = Frame
-    label.BackgroundTransparency = 1
-    label.Position = UDim2.new(0, 10, 0, posY)
-    label.Size = UDim2.new(1, -20, 0, 25)
-    label.Font = Enum.Font.SourceSans
-    label.Text = name .. ": " .. default
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 16
-
-    local input = Instance.new("TextBox")
-    input.Parent = Frame
-    input.Position = UDim2.new(0, 10, 0, posY + 25)
-    input.Size = UDim2.new(1, -20, 0, 30)
-    input.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    input.Text = tostring(default)
-    input.TextColor3 = Color3.fromRGB(255, 255, 255)
-    input.Font = Enum.Font.SourceSans
-    input.TextSize = 18
-    input.Changed:Connect(function(prop)
-        if prop == "Text" then
-            local val = math.clamp(tonumber(input.Text) or default, minv, maxv)
-            input.Text = tostring(val)
-            callback(val)
-            label.Text = name .. ": " .. val
+        if Value then
+            _G.InfJumpConn = UserInputService.InputBegan:Connect(function(input, gp)
+                if gp then return end
+                if input.KeyCode == Enum.KeyCode.Space then
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = player.Character.HumanoidRootPart
+                        hrp.Velocity = Vector3.new(hrp.Velocity.X, 60, hrp.Velocity.Z)
+                    end
+                end
+            end)
         end
-    end)
+    end,
+}, "INDEX")
+
+local Groupbox = Tab:CreateGroupbox({
+    Name = "Groupbox",
+    Column = 2,
+}, "INDEX")
+
+local Toggle = Groupbox:CreateToggle({
+    Name = "ESP",
+    CurrentValue = false,
+    Style = 2,
+    Callback = function(Value)
+
+        local Players = game:GetService("Players")
+        local RunService = game:GetService("RunService")
+        local LocalPlayer = Players.LocalPlayer
+
+        if _G.ESP_Loop then
+            _G.ESP_Loop:Disconnect()
+            _G.ESP_Loop = nil
+        end
+
+        if Value then
+            _G.ESP_Loop = RunService.RenderStepped:Connect(function()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local char = player.Character
+                        local hrp = char.HumanoidRootPart
+
+                        -- DISTANCE
+                        local distance = 0
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            distance = math.floor(
+                                (LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+                            )
+                        end
+
+                        -- HIGHLIGHT
+                        if not char:FindFirstChild("ESP_HIGHLIGHT") then
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "ESP_HIGHLIGHT"
+                            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            highlight.FillTransparency = 0.4
+                            highlight.OutlineTransparency = 0
+                            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            highlight.Parent = char
+                        end
+
+                        -- NAME + DISTANCE
+if not hrp:FindFirstChild("ESP_TAG") then
+    local bill = Instance.new("BillboardGui")
+    bill.Name = "ESP_TAG"
+    bill.Size = UDim2.new(0, 120, 0, 18)
+    bill.AlwaysOnTop = true
+    bill.StudsOffset = Vector3.new(0, 2.5, 0)
+    bill.MaxDistance = 5000
+    bill.Parent = hrp
+
+    local text = Instance.new("TextLabel")
+    text.Name = "TEXT"
+    text.Size = UDim2.new(1,0,1,0)
+    text.BackgroundTransparency = 1
+    text.TextColor3 = Color3.fromRGB(255,255,255)
+    text.TextStrokeTransparency = 0.3
+    text.TextScaled = false
+    text.TextSize = 14
+    text.Font = Enum.Font.GothamSemibold
+    text.Parent = bill
 end
 
--- Toggles & Sliders
-y = y + 5
-createToggle("Anti-AFK Silent", y, toggleAntiAFK, false); y = y + 45
-createToggle("Fly (WASD + Space/Ctrl)", y, toggleFly, false); y = y + 45
-createToggle("Speed (Chạy nhanh)", y, function() speedEnabled = not speedEnabled end, false); y = y + 45
-createToggle("Jump High", y, function() jumpEnabled = not jumpEnabled end, false); y = y + 45
-createToggle("Infinite Jump", y, function() infJump = not infJump end, false); y = y + 45
-createToggle("Hitbox Expander", y, function() hitboxEnabled = not hitboxEnabled end, false); y = y + 45
-createToggle("Aimlock (Right Click)", y, function() aimlockEnabled = not aimlockEnabled end, false); y = y + 45
+                        -- UPDATE TEXT REALTIME
+                        if hrp:FindFirstChild("ESP_TAG") and hrp.ESP_TAG:FindFirstChild("TEXT") then
+                            hrp.ESP_TAG.TEXT.Text = player.Name .. " [" .. distance .. "m]"
+                        end
+                    end
+                end
+            end)
 
-createSlider("Fly Speed", y, 20, 300, 50, function(v) flySpeed = v end); y = y + 60
-createSlider("Walk Speed", y, 16, 300, 50, function(v) walkSpeed = v end); y = y + 60
-createSlider("Jump Power", y, 50, 500, 100, function(v) jumpPower = v end); y = y + 60
-createSlider("FOV (Camera)", y, 30, 150, 70, function(v) camera.FieldOfView = v end); y = y + 60
-
--- Main Loop
-RunService.Heartbeat:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-        local hum = char.Humanoid
-        hum.WalkSpeed = speedEnabled and walkSpeed or origWalk
-        hum.JumpPower = jumpEnabled and jumpPower or origJump
-        
-        if hitboxEnabled then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                    local hrp = p.Character.HumanoidRootPart
-                    hrp.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
-                    hrp.Transparency = 0.7
-                    hrp.CanCollide = false
+        else
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.Character then
+                    if player.Character:FindFirstChild("ESP_HIGHLIGHT") then
+                        player.Character.ESP_HIGHLIGHT:Destroy()
+                    end
+                    if player.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = player.Character.HumanoidRootPart
+                        if hrp:FindFirstChild("ESP_TAG") then
+                            hrp.ESP_TAG:Destroy()
+                        end
+                    end
                 end
             end
         end
-    end
-end)
-
-player.CharacterAdded:Connect(function()
-    wait(1)
-    origWalk = player.Character.Humanoid.WalkSpeed
-    origJump = player.Character.Humanoid.JumpPower
-end)
-
--- Notify
-StarterGui:SetCore("SendNotification", {
-    Title = "Kuromi's Universal Hub Loaded!",
-    Text = "Anti-AFK Silent toggle ON để AFK ngầm. Farm CDVN hoặc bất kỳ game nào thoải mái ku!",
-    Duration = 8
-})
+    end,
+}, "INDEX")
